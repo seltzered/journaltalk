@@ -8,14 +8,30 @@ class Keystore < ActiveRecord::Base
   end
 
   def self.put(key, value)
+    key_column = Keystore.connection.quote_column_name("key")
+    value_column = Keystore.connection.quote_column_name("value")
+
     if Keystore.connection.adapter_name == "SQLite"
       Keystore.connection.execute("INSERT OR REPLACE INTO " <<
-        "#{Keystore.table_name} (`key`, `value`) VALUES " <<
+        "#{Keystore.table_name} (#{key_column}, #{value_column}) VALUES " <<
         "(#{q(key)}, #{q(value)})")
-    else
+    
+    elsif Keystore.connection.adapter_name == "PostgreSQL"
+      Keystore.connection.execute("UPDATE #{Keystore.table_name} " +
+        "SET #{value_column} =#{q(value)} WHERE #{key_column} =#{q(key)}")
+      Keystore.connection.execute("INSERT INTO #{Keystore.table_name} (#{key_column}, #{value_column}) " +
+        "SELECT #{q(key)}, #{q(value)} " +
+        "WHERE NOT EXISTS (SELECT 1 FROM #{Keystore.table_name} WHERE #{key_column} = #{q(key)}) "
+        )
+
+    elsif Keystore.connection.adapter_name == "MySQL" || Keystore.connection.adapter_name == "Mysql2"
       Keystore.connection.execute("INSERT INTO #{Keystore.table_name} (" +
-        "`key`, `value`) VALUES (#{q(key)}, #{q(value)}) ON DUPLICATE KEY " +
-        "UPDATE `value` = #{q(value)}")
+        "#{key_column}, #{value_column}) VALUES (#{q(key)}, #{q(value)}) ON DUPLICATE KEY " +
+        "UPDATE #{value_column} = #{q(value)}")
+
+    else
+      raise "Error: keystore requires db-specific put method."
+
     end
 
     true
@@ -28,17 +44,41 @@ class Keystore < ActiveRecord::Base
   def self.incremented_value_for(key, amount = 1)
     new_value = nil
 
-    Keystore.transaction do
+    Keystore.transaction do    
+
+      key_column = Keystore.connection.quote_column_name("key")
+      value_column = Keystore.connection.quote_column_name("value")
+
+
       if Keystore.connection.adapter_name == "SQLite"
         Keystore.connection.execute("INSERT OR IGNORE INTO " <<
-          "#{Keystore.table_name} (`key`, `value`) VALUES " <<
+          "#{Keystore.table_name} (#{key_column}, #{value_column}) VALUES " <<
           "(#{q(key)}, 0)")
         Keystore.connection.execute("UPDATE #{Keystore.table_name} " <<
-          "SET `value` = `value` + #{q(amount)} WHERE `key` = #{q(key)}")
-      else
+          "SET #{value_column} = #{value_column} + #{q(amount)} WHERE #{key_column} = #{q(key)}")
+      
+      elsif Keystore.connection.adapter_name == "PostgreSQL"
+        previous_keystore = Keystore.find_by_key(key)
+        if(previous_keystore == nil || previous_keystore.value == nil)
+          previous_amount = 0
+        else
+          previous_amount = previous_keystore.value
+        end
+
+        Keystore.connection.execute("UPDATE #{Keystore.table_name} " +
+          "SET #{value_column}=#{q(previous_amount)} + #{q(amount)} WHERE #{key_column}=#{q(key)}")
+        Keystore.connection.execute("INSERT INTO #{Keystore.table_name} (#{key_column}, #{value_column}) " +
+          "SELECT #{q(key)}, #{q(previous_amount)} + #{q(amount)} " +
+          "WHERE NOT EXISTS (SELECT 1 FROM #{Keystore.table_name} WHERE #{key_column}=#{q(key)}) ")
+      
+      elsif Keystore.connection.adapter_name == "MySQL" || Keystore.connection.adapter_name == "Mysql2"
         Keystore.connection.execute("INSERT INTO #{Keystore.table_name} (" +
-          "`key`, `value`) VALUES (#{q(key)}, #{q(amount)}) ON DUPLICATE KEY " +
-          "UPDATE `value` = `value` + #{q(amount)}")
+          "#{key_column}, #{value_column}) VALUES (#{q(key)}, #{q(amount)}) ON DUPLICATE KEY " +
+          "UPDATE #{value_column} = #{value_column} + #{q(amount)}")
+      
+      else
+        raise "Error: keystore requires db-specific increment method."
+
       end
 
       new_value = self.value_for(key)
@@ -58,4 +98,5 @@ class Keystore < ActiveRecord::Base
   def self.value_for(key)
     self.get(key).try(:value)
   end
+
 end
