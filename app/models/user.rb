@@ -131,9 +131,12 @@ class User < ActiveRecord::Base
   end
 
   def recent_threads(amount)
-    Comment.connection.select_all("SELECT DISTINCT " +
-      "thread_id FROM comments WHERE user_id = #{q(self.id)} ORDER BY " +
-      "created_at DESC LIMIT #{q(amount)}").map{|r| r.values.first }
+    Comment.select('thread_id')
+           .from('comments')
+           .where("user_id = #{q(self.id)}")
+           .order('created_at DESC')      
+           .limit(20)
+           .map{|r| r.values.first }
   end
 
   def stories_submitted_count
