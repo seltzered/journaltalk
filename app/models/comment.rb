@@ -34,7 +34,7 @@ class Comment < ActiveRecord::Base
     has is_deleted
     has created_at
 
-    where "is_deleted = 0 AND is_moderated = 0"
+    where "is_deleted = #{Comment.connection.quoted_false} AND is_moderated = #{Comment.connection.quoted_false}"
   end
 
   validate do

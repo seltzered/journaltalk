@@ -200,7 +200,7 @@ class CommentsController < ApplicationController
 
     @comments = Comment.find(
       :all,
-      :conditions => "is_deleted = 0 AND is_moderated = 0",
+      :conditions => "is_deleted = #{Comment.connection.quoted_false} AND is_moderated = #{Comment.connection.quoted_false}",
       :order => "created_at DESC",
       :offset => ((@page - 1) * COMMENTS_PER_PAGE),
       :limit => COMMENTS_PER_PAGE,
