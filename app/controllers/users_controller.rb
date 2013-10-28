@@ -13,7 +13,8 @@ class UsersController < ApplicationController
       (parents[u.invited_by_user_id.to_i] ||= []).push u
     end
 
-    Keystore.find(:all, :conditions => "`key` like 'user:%:karma'").each do |k|
+    key_column = Keystore.connection.quote_column_name("key")
+    Keystore.find(:all, :conditions => "#{key_column} like 'user:%:karma'").each do |k|
       karmas[k.key[/\d+/].to_i] = k.value
     end
 

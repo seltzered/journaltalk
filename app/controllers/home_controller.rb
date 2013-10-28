@@ -181,8 +181,9 @@ private
     # eager load comment counts
     if stories.any?
       comment_counts = {}
+      key_column = Keystore.connection.quote_column_name("key")
       Keystore.find(:all, :conditions => stories.map{|s|
-      "`key` = 'story:#{s.id}:comment_count'" }.join(" OR ")).each do |ks|
+      "#{key_column} = 'story:#{s.id}:comment_count'" }.join(" OR ")).each do |ks|
         comment_counts[ks.key[/\d+/].to_i] = ks.value
       end
 
