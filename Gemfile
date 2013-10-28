@@ -39,3 +39,5 @@ group :test, :development do
   gem "machinist"
   gem "sqlite3"
 end
+
+ruby '2.0.0'
