@@ -1,3 +1,8 @@
+#Hey Github, a note on branches
+
+Currently changes (for postgres/etc.) are on the journaltalk_master branch.
+
+
 ###Lobsters Rails Project
 
 This is the source code to the site operating at
