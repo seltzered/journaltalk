@@ -15,6 +15,10 @@ module Lobsters
     # Application configuration should go into files in config/initializers
     # -- all .rb files in that directory are automatically loaded.
 
+    #Don't initialize on precompile - something is connecting to the database
+    #during this step which Heroku placeholders and causes a crash 
+    config.assets.initialize_on_precompile = false
+
     # Custom directories with classes and modules you want to be autoloadable.
     config.autoload_paths += %W(#{config.root}/extras)
 
