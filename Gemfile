@@ -30,7 +30,7 @@ gem "rdiscount"
 
 gem "oauth"
 
-#gem "thinking-sphinx", "2.0.12"
+gem "thinking-sphinx", "2.0.12" #TODO - this is an old version. TS 3.0 does things different - see http://stackoverflow.com/questions/16510613/undefined-method-define-index-with-thinking-sphinx
 
 gem "mail"
 
